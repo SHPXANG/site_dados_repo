@@ -127,7 +127,7 @@ def main():
         # --- TABELA DE DADOS ---
         st.subheader("📋 Lista de Documentos Detalhada")
         # Formatando a exibição da tabela
-        df_display = df[['Processo', 'numero_fatura', 'Valor', 'Vencimento']].copy()
+        df_display = df[['Processo', 'numero_titulo', 'Valor', 'Vencimento']].copy()
         df_display['Vencimento'] = df_display['Vencimento'].dt.strftime('%d/%m/%Y')
         
         st.dataframe(
