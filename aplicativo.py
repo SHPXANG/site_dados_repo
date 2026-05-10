@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="TradeFlow | Gestão Financeira",
+    page_title="Shoptan & XANGAI | Gestão Financeira",
     layout="wide",
     initial_sidebar_state="expanded",
 )
