@@ -51,7 +51,7 @@ def get_data(empresa_selecionada):
     engine = create_engine(db_url)
     
     # Nome da tabela conforme o teu script de carga
-    nome_tabela = f"tabela_{empresa_selecionada}"
+    nome_tabela = f'"tabela_{empresa_selecionada}"'
     query = f"SELECT * FROM {nome_tabela}"
     
     df = pd.read_sql(query, engine)
