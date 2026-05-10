@@ -444,7 +444,7 @@ def login():
             <div class="login-card">
                 <div class="login-logo">
                     <span class="icon">🌐</span>
-                    <h1>TradeFlow</h1>
+                    <h1>Shoptan e  Xangai</h1>
                     <p>Plataforma de Gestão de Importações</p>
                 </div>
             </div>
@@ -466,7 +466,7 @@ def login():
         # Rodapé discreto
         st.markdown("""
         <p style="text-align:center;color:rgba(255,255,255,.2);font-size:.75rem;margin-top:40px;">
-            © 2025 TradeFlow · Gestão Financeira Corporativa
+            © 2025 Shoptan e  Xangai · Gestão Financeira Corporativa
         </p>
         """, unsafe_allow_html=True)
         return False
@@ -520,7 +520,7 @@ def main():
             <p style="font-size:1.15rem;font-weight:800;
                background:linear-gradient(90deg,#63b3ed,#90cdf4);
                -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-               margin:6px 0 2px;letter-spacing:-.5px;">TradeFlow</p>
+               margin:6px 0 2px;letter-spacing:-.5px;">Shoptan e  Xangai</p>
             <p style="font-size:.72rem;color:rgba(160,210,255,.45);margin:0;">
                Gestão de Importações
             </p>
@@ -544,7 +544,7 @@ def main():
         st.markdown("""
         <p style="position:absolute;bottom:16px;left:0;right:0;
            text-align:center;font-size:.7rem;color:rgba(160,210,255,.2);">
-           © 2025 TradeFlow
+           © 2025 Shoptan e  Xangai
         </p>
         """, unsafe_allow_html=True)
 
