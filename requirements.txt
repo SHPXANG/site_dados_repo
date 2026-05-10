@@ -4,4 +4,4 @@ requests
 plotly
 openpyxl
 sqlalchemy
-
+psycopg2-binary
