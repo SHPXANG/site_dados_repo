@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
+import plotly.graph_objects as go
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="Shoptan & XANGAI | Gestão Financeira",
+    page_title="SHOPTAN XANGAI | Gestão Financeira",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -311,11 +312,18 @@ def inject_global_css():
     /* ── Gráfico ──────────────────────────────────────────── */
     [data-testid="stArrowVegaLiteChart"],
     [data-testid="stVegaLiteChart"] {
-        background: rgba(255,255,255,.03) !important;
-        border: 1px solid rgba(99,179,237,.12) !important;
+        background: transparent !important;
+        border: 1px solid rgba(255,255,255,.18) !important;
         border-radius: 16px !important;
         padding: 12px !important;
         animation: fadeUp .6s ease-out .35s both;
+    }
+    /* Forçar canvas/svg do gráfico com fundo transparente */
+    [data-testid="stArrowVegaLiteChart"] canvas,
+    [data-testid="stVegaLiteChart"] canvas,
+    [data-testid="stArrowVegaLiteChart"] svg,
+    [data-testid="stVegaLiteChart"] svg {
+        background: transparent !important;
     }
 
     /* ── Botões ───────────────────────────────────────────── */
@@ -444,7 +452,7 @@ def login():
             <div class="login-card">
                 <div class="login-logo">
                     <span class="icon">🌐</span>
-                    <h1>Shoptan e  Xangai</h1>
+                    <h1>Shoptan & Xangai</h1>
                     <p>Plataforma de Gestão de Importações</p>
                 </div>
             </div>
@@ -466,7 +474,7 @@ def login():
         # Rodapé discreto
         st.markdown("""
         <p style="text-align:center;color:rgba(255,255,255,.2);font-size:.75rem;margin-top:40px;">
-            © 2025 Shoptan e  Xangai · Gestão Financeira Corporativa
+            © 2025 Shoptan & Xangai · Gestão Financeira Corporativa
         </p>
         """, unsafe_allow_html=True)
         return False
@@ -520,7 +528,7 @@ def main():
             <p style="font-size:1.15rem;font-weight:800;
                background:linear-gradient(90deg,#63b3ed,#90cdf4);
                -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-               margin:6px 0 2px;letter-spacing:-.5px;">Shoptan e  Xangai</p>
+               margin:6px 0 2px;letter-spacing:-.5px;">Shoptan & Xangai</p>
             <p style="font-size:.72rem;color:rgba(160,210,255,.45);margin:0;">
                Gestão de Importações
             </p>
@@ -541,10 +549,20 @@ def main():
             st.session_state.logged_in = False
             st.rerun()
 
+        # ── FILTROS (serão populados após carregar os dados) ──
+        st.markdown("""
+        <hr style="border-color:rgba(99,179,237,.15);margin:16px 0;">
+        <p style="font-size:.72rem;letter-spacing:1px;text-transform:uppercase;
+                  color:rgba(160,210,255,.45);margin:0 0 10px;">🔎 Filtros</p>
+        """, unsafe_allow_html=True)
+
+        filtro_processo_placeholder = st.empty()
+        filtro_tag_placeholder      = st.empty()
+
         st.markdown("""
         <p style="position:absolute;bottom:16px;left:0;right:0;
            text-align:center;font-size:.7rem;color:rgba(160,210,255,.2);">
-           © 2025 Shoptan e  Xangai
+           © 2025 Shoptan & Xangai
         </p>
         """, unsafe_allow_html=True)
 
@@ -564,47 +582,135 @@ def main():
         with st.spinner("Carregando dados do banco..."):
             df = get_data(empresa)
 
+        # ── FILTRO: PROCESSO (sidebar, populado com dados reais) ──
+        processos_disponiveis = sorted(df['Processo'].dropna().unique().tolist())
+        processos_selecionados = filtro_processo_placeholder.multiselect(
+            "📦  Processo",
+            options=processos_disponiveis,
+            default=[],
+            placeholder="Todos os processos"
+        )
+
+        # ── FILTRO: TAG (apenas Xangai) ───────────────────────────
+        tags_selecionadas = []
+        if empresa == "Xangai" and "tags" in df.columns:
+            tags_disponiveis = sorted(
+                set(t.strip() for tags in df['tags'].dropna() for t in str(tags).split(',') if t.strip())
+            )
+            if tags_disponiveis:
+                tags_selecionadas = filtro_tag_placeholder.multiselect(
+                    "🏷️  Tag",
+                    options=tags_disponiveis,
+                    default=[],
+                    placeholder="Todas as tags"
+                )
+
+        # ── APLICA FILTROS ────────────────────────────────────────
+        df_filtrado = df.copy()
+
+        if processos_selecionados:
+            df_filtrado = df_filtrado[df_filtrado['Processo'].isin(processos_selecionados)]
+
+        if tags_selecionadas and "tags" in df_filtrado.columns:
+            df_filtrado = df_filtrado[
+                df_filtrado['tags'].apply(
+                    lambda cell: any(
+                        tag in str(cell).split(',') for tag in tags_selecionadas
+                    ) if pd.notna(cell) else False
+                )
+            ]
+
+        # ── KPIs (calculados sobre dados filtrados) ───────────────
         hoje          = pd.Timestamp.now().normalize()
-        total_receber = df['Valor'].sum()
-        qtd_aberto    = len(df)
-        vencidos_df   = df[df['Vencimento'] < hoje]
+        total_receber = df_filtrado['Valor'].sum()
+        qtd_aberto    = len(df_filtrado)
+        vencidos_df   = df_filtrado[df_filtrado['Vencimento'] < hoje]
         qtd_vencidos  = len(vencidos_df)
 
-        # KPI Cards
         render_kpi_cards(total_receber, qtd_aberto, qtd_vencidos)
 
         # ── GRÁFICO ──────────────────────────────────────────────
         st.markdown('<div class="section-title">💰 Valor por Processo</div>', unsafe_allow_html=True)
         chart_data = (
-            df.groupby("Processo")["Valor"]
+            df_filtrado.groupby("Processo")["Valor"]
               .sum()
               .sort_values(ascending=True)
               .reset_index()
         )
-        st.bar_chart(data=chart_data, x="Processo", y="Valor", horizontal=True,
-                     use_container_width=True, color="#4299e1")
+        if chart_data.empty:
+            st.info("Nenhum dado encontrado para os filtros selecionados.")
+        else:
+            # Formata rótulos em R$
+            chart_data['Valor_fmt'] = chart_data['Valor'].apply(
+                lambda v: f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            )
+
+            fig = go.Figure(go.Bar(
+                x=chart_data['Valor'],
+                y=chart_data['Processo'],
+                orientation='h',
+                text=chart_data['Valor_fmt'],
+                textposition='outside',          # rótulo fora da barra
+                textfont=dict(color='#90cdf4', size=12, family='Inter'),
+                marker=dict(
+                    color='#4299e1',
+                    line=dict(color='rgba(99,179,237,.3)', width=1)
+                ),
+                hovertemplate='<b>%{y}</b><br>Valor: %{text}<extra></extra>',
+            ))
+
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',   # fundo externo transparente
+                plot_bgcolor='rgba(0,0,0,0)',    # fundo do plot transparente
+                margin=dict(l=10, r=120, t=10, b=10),  # espaço à direita para rótulo
+                height=max(300, len(chart_data) * 48),
+                xaxis=dict(
+                    showgrid=True,
+                    gridcolor='rgba(255,255,255,.08)',
+                    tickfont=dict(color='rgba(255,255,255,.5)', size=10),
+                    tickformat=',.0f',
+                    title='',
+                    zeroline=False,
+                ),
+                yaxis=dict(
+                    tickfont=dict(color='#e2e8f0', size=12),
+                    title='',
+                    automargin=True,
+                ),
+                showlegend=False,
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # ── TABELA ───────────────────────────────────────────────
         st.markdown('<div class="section-title">📋 Lista de Documentos</div>', unsafe_allow_html=True)
 
-        df_display = df[['Processo', 'numero_do_documento', 'Valor', 'Vencimento']].copy()
+        colunas_display = ['Processo', 'numero_do_documento', 'Valor', 'Vencimento']
+        if empresa == "Xangai" and "tags" in df_filtrado.columns:
+            colunas_display.append('tags')
+
+        df_display = df_filtrado[colunas_display].copy()
         df_display['Vencimento'] = df_display['Vencimento'].dt.strftime('%d/%m/%Y')
         df_display['Valor']      = df_display['Valor'].apply(
             lambda v: f"R$ {v:,.2f}".replace(",","X").replace(".",",").replace("X",".")
         )
 
+        col_config = {
+            "Processo":            st.column_config.TextColumn("Processo"),
+            "numero_do_documento": st.column_config.TextColumn("Nº Documento"),
+            "Valor":               st.column_config.TextColumn("Valor"),
+            "Vencimento":          st.column_config.TextColumn("Vencimento"),
+        }
+        if empresa == "Xangai" and "tags" in df_display.columns:
+            col_config["tags"] = st.column_config.TextColumn("Tags")
+
         st.dataframe(
             df_display,
             use_container_width=True,
             hide_index=True,
-            column_config={
-                "Processo":            st.column_config.TextColumn("Processo"),
-                "numero_do_documento": st.column_config.TextColumn("Nº Documento"),
-                "Valor":               st.column_config.TextColumn("Valor"),
-                "Vencimento":          st.column_config.TextColumn("Vencimento"),
-            }
+            column_config=col_config
         )
 
     except Exception as e:
