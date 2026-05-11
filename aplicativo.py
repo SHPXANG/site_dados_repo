@@ -593,9 +593,9 @@ def main():
 
         # ── FILTRO: TAG (apenas Xangai) ───────────────────────────
         tags_selecionadas = []
-        if empresa == "Xangai" and "tags" in df.columns:
+        if empresa == "Xangai" and "Tags" in df.columns:
             tags_disponiveis = sorted(
-                set(t.strip() for tags in df['tags'].dropna() for t in str(tags).split(',') if t.strip())
+                set(t.strip() for val in df['Tags'].dropna() for t in str(val).split(',') if t.strip())
             )
             if tags_disponiveis:
                 tags_selecionadas = filtro_tag_placeholder.multiselect(
@@ -611,9 +611,9 @@ def main():
         if processos_selecionados:
             df_filtrado = df_filtrado[df_filtrado['Processo'].isin(processos_selecionados)]
 
-        if tags_selecionadas and "tags" in df_filtrado.columns:
+        if tags_selecionadas and "Tags" in df_filtrado.columns:
             df_filtrado = df_filtrado[
-                df_filtrado['tags'].apply(
+                df_filtrado['Tags'].apply(
                     lambda cell: any(
                         tag in str(cell).split(',') for tag in tags_selecionadas
                     ) if pd.notna(cell) else False
@@ -688,8 +688,8 @@ def main():
         st.markdown('<div class="section-title">📋 Lista de Documentos</div>', unsafe_allow_html=True)
 
         colunas_display = ['Processo', 'numero_do_documento', 'Valor', 'Vencimento']
-        if empresa == "Xangai" and "tags" in df_filtrado.columns:
-            colunas_display.append('tags')
+        if empresa == "Xangai" and "Tags" in df_filtrado.columns:
+            colunas_display.append('Tags')
 
         df_display = df_filtrado[colunas_display].copy()
         df_display['Vencimento'] = df_display['Vencimento'].dt.strftime('%d/%m/%Y')
@@ -703,8 +703,8 @@ def main():
             "Valor":               st.column_config.TextColumn("Valor"),
             "Vencimento":          st.column_config.TextColumn("Vencimento"),
         }
-        if empresa == "Xangai" and "tags" in df_display.columns:
-            col_config["tags"] = st.column_config.TextColumn("Tags")
+        if empresa == "Xangai" and "Tags" in df_display.columns:
+            col_config["Tags"] = st.column_config.TextColumn("Tags")
 
         st.dataframe(
             df_display,
