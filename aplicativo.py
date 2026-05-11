@@ -597,6 +597,10 @@ def main():
             tags_disponiveis = sorted(
                 set(t.strip() for val in df['Tags'].dropna() for t in str(val).split(',') if t.strip())
             )
+            # Adiciona opção "(Sem Tag)" se houver valores nulos ou vazios
+            if df['Tags'].isna().any() or (df['Tags'].astype(str).str.strip() == "").any() or (df['Tags'].astype(str).str.strip() == "None").any():
+                tags_disponiveis.insert(0, "(Sem Tag)")
+
             if tags_disponiveis:
                 tags_selecionadas = filtro_tag_placeholder.multiselect(
                     "🏷️  Tag",
@@ -612,13 +616,15 @@ def main():
             df_filtrado = df_filtrado[df_filtrado['Processo'].isin(processos_selecionados)]
 
         if tags_selecionadas and "Tags" in df_filtrado.columns:
-            df_filtrado = df_filtrado[
-                df_filtrado['Tags'].apply(
-                    lambda cell: any(
-                        tag in str(cell).split(',') for tag in tags_selecionadas
-                    ) if pd.notna(cell) else False
-                )
-            ]
+            def matches_tags(cell):
+                cell_str = str(cell).strip() if pd.notna(cell) else ""
+                if cell_str == "" or cell_str.lower() == "none":
+                    return "(Sem Tag)" in tags_selecionadas
+                
+                cell_tags = [t.strip() for t in cell_str.split(',') if t.strip()]
+                return any(t in tags_selecionadas for t in cell_tags)
+
+            df_filtrado = df_filtrado[df_filtrado['Tags'].apply(matches_tags)]
 
         # ── KPIs (calculados sobre dados filtrados) ───────────────
         hoje          = pd.Timestamp.now().normalize()
